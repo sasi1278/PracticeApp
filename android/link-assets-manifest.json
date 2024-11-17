@@ -1,0 +1,13 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/Doto.ttf",
+      "sha1": "012da9c248176e2d749649e3f3409533c4e9bf48"
+    },
+    {
+      "path": "assets/fonts/Geist.ttf",
+      "sha1": "dd63a75c4d0afb518660c05dd8596c74323d02a1"
+    }
+  ]
+}
