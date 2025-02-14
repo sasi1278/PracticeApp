@@ -1,4 +1,4 @@
-name: Update README on Main branch
+name: Update README on Main
 
 on:
   push:
@@ -50,7 +50,7 @@ jobs:
             # Prepend new version with a new CHANGE LOGS section
             echo -e "$VERSION\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
           fi
-          
+
       - name: Commit and push changes
         env:
           PAT: ${{ secrets.PAT_TOKEN }}
