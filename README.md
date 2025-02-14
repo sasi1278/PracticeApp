@@ -4,6 +4,7 @@
 
 ### CHANGE LOGS
 * ADH-1533 - new version check 0.0.3
+* edddc64 - ADh- 1224 king
 
 * 049ab90 - ADH - 1533 new version 0.0.3
 
