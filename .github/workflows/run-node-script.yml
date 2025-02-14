@@ -36,14 +36,18 @@ jobs:
         run: |
           VERSION="## v${{ env.VERSION }}"
           RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
-          CHANGE_LOG="### CHANGE LOGS\n${{ env.CHANGE_LOG }}\n"
+          CHANGE_LOG_ENTRY="* ${{ env.CHANGE_LOG }}"
 
           if grep -q "$VERSION" README.md; then
-            # Append changelog to existing version
-            awk -v new_log="$CHANGE_LOG" '/^### CHANGE LOGS/{print; print new_log; next}1' README.md > temp.md && mv temp.md README.md
+            # Append changelog entry under existing version's CHANGE LOGS
+            awk -v log_entry="$CHANGE_LOG_ENTRY" '
+              /^### CHANGE LOGS/ { print; found=1; next }
+              found && NF { print log_entry; found=0 }
+              { print }
+            ' README.md > temp.md && mv temp.md README.md
           else
-            # Prepend new version at the top
-            echo -e "$VERSION\n\n$RELEASE_DATE\n\n$CHANGE_LOG\n$(cat README.md)" > README.md
+            # Prepend new version with a new CHANGE LOGS section
+            echo -e "$VERSION\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
           fi
 
       - name: Commit and push changes
@@ -54,4 +58,4 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git add README.md
           git commit -m "Update README with latest changelog [skip ci]" || echo "No changes to commit"
-          git push https://x-access-token:${PAT}@github.com/sasi1278/PracticeApp.git main
+          git push https://x-access-token:${PAT}@github.com/278/PracticeApp.git main
