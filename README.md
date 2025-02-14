@@ -12,5 +12,7 @@
 **RELEASE DATE:** 2025-02-14
 
 ### CHANGE LOGS
+* <span style='color:skyblue;'>[ADH-296](https://jira.example.com/browse/ADH-296)</span> - back to roots
+
 
 *  - 
