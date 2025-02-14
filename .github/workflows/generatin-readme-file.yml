@@ -31,12 +31,12 @@ jobs:
       - name: Extract latest commit message
         id: latest_commit
         run: |
-          # Try to get the last commit that touched README.md
+          # Attempt to get the last commit that touched README.md
           LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md || echo "")
           
           if [ -z "$LAST_VERSION_COMMIT" ]; then
-            echo "README.md is new, using the current commit only."
-            # Set the range to just the current commit.
+            echo "README.md is new. Using the commit that triggered its creation (HEAD)."
+            # Use HEAD commit as the only commit in the changelog range.
             commit_range="HEAD~0..HEAD"
           else
             commit_range="${LAST_VERSION_COMMIT}..HEAD"
