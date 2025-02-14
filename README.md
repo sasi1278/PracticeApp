@@ -1,3 +1,11 @@
+## v0.0.4
+
+**RELEASE DATE:** 2025-02-14
+
+### CHANGE LOGS
+
+* f4af3c7 - ADh- new version 0.0.4
+
 ## v0.0.3
 
 **RELEASE DATE:** 2025-02-14
