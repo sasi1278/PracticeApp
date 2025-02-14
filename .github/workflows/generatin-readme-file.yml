@@ -49,31 +49,29 @@ jobs:
             touch README.md
           fi
 
-          # Try to get the last commit hash that modified README.md (using --follow to track history)
+          # Get the hash of the last commit that touched README.md (using --follow to track its history)
           LAST_VERSION_COMMIT=$(git log --follow -1 --pretty=format:'%h' -- README.md || echo "")
+          CURRENT_COMMIT=$(git rev-parse HEAD)
           echo "LAST_VERSION_COMMIT: ${LAST_VERSION_COMMIT}"
+          echo "CURRENT_COMMIT: ${CURRENT_COMMIT}"
 
-          if [ -z "$LAST_VERSION_COMMIT" ]; then
-            # No prior commit for the current README? Use full history.
-            COMMIT_RANGE=""
+          # If the current commit is the same as the last commit that touched README.md,
+          # then the file was just created/modified in this commit. In that case, show at least this commit.
+          if [ "$LAST_VERSION_COMMIT" = "$CURRENT_COMMIT" ]; then
+            LOG_COMMAND="git log --follow -1 HEAD --pretty=format:'%h %s' -- README.md"
           else
             COMMIT_RANGE="${LAST_VERSION_COMMIT}..HEAD"
-          fi
-
-          # Build the changelog.
-          # Use --follow so that even if the file was deleted/recreated, we get its full history.
-          if [ -z "$COMMIT_RANGE" ]; then
-            LOG_COMMAND="git log --follow HEAD --pretty=format:'%h %s' -- README.md"
-          else
             LOG_COMMAND="git log --follow $COMMIT_RANGE --pretty=format:'%h %s' -- README.md"
           fi
+
+          echo "Using log command: $LOG_COMMAND"
 
           CHANGE_LOG=""
           while IFS= read -r line; do
             COMMIT_HASH=$(echo "$line" | awk '{print $1}')
             COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
 
-            # Normalize commit message (e.g., convert Jira IDs to uppercase with a hyphen)
+            # Normalize commit message (for example, standardizing Jira ticket format)
             NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
 
             if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
@@ -98,7 +96,7 @@ jobs:
       - name: Update README
         run: |
           set -e
-          # Load environment variables (VERSION and CHANGE_LOG)
+          # Source environment variables (VERSION and CHANGE_LOG)
           source $GITHUB_ENV
           VERSION_LABEL="## v${VERSION}"
           RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
