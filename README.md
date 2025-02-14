@@ -1,3 +1,11 @@
+## v0.0.3
+
+**RELEASE DATE:** 2025-02-14
+
+### CHANGE LOGS
+
+* 049ab90 - ADH - 1533 new version 0.0.3
+
 ## v0.0.2
 
 **RELEASE DATE:** 2025-02-14
