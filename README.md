@@ -14,5 +14,6 @@
 **RELEASE DATE:** 2025-02-14
 
 ### CHANGE LOGS
+* 1216514 - ADH - 1533 going back to previous version 0.0.1
 
 * 9e949d4 - ADH-1533 commit from 0.0.1
