@@ -43,21 +43,33 @@ jobs:
         id: latest_commit
         run: |
           set -e
-          # If README.md does not exist, create an empty one
+          # Ensure README.md exists; create an empty one if not found.
           if [ ! -f README.md ]; then
             echo "README.md not found, creating a new one..."
             touch README.md
           fi
 
+          # Try to get the last commit hash that modified README.md.
           LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md || echo "")
+          echo "LAST_VERSION_COMMIT: ${LAST_VERSION_COMMIT}"
+
+          # If no prior commit is found, consider the whole history (or limit as needed)
+          if [ -z "$LAST_VERSION_COMMIT" ]; then
+            COMMIT_RANGE="HEAD"
+          else
+            COMMIT_RANGE="${LAST_VERSION_COMMIT}..HEAD"
+          fi
 
           CHANGE_LOG=""
           while IFS= read -r line; do
+            # Split the line into commit hash and message.
             COMMIT_HASH=$(echo "$line" | awk '{print $1}')
             COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
 
+            # Normalize commit message (e.g., convert Jira IDs to uppercase)
             NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
 
+            # If the commit message starts with a Jira-like ID, create a formatted link.
             if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
               JIRA_ID="${BASH_REMATCH[1]}"
               COMMIT_TEXT="${BASH_REMATCH[2]}"
@@ -66,9 +78,9 @@ jobs:
             else
               CHANGE_LOG+="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}\n"
             fi
-          done <<< "$(git log ${LAST_VERSION_COMMIT}..HEAD --pretty=format:'%h %s')"
+          done <<< "$(git log $COMMIT_RANGE --pretty=format:'%h %s')"
 
-          # Export CHANGE_LOG to both env and output
+          # Export CHANGE_LOG to both GITHUB_ENV and GITHUB_OUTPUT for use in later steps.
           echo "CHANGE_LOG<<EOF" >> $GITHUB_ENV
           echo -e "$CHANGE_LOG" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
@@ -80,17 +92,18 @@ jobs:
       - name: Update README
         run: |
           set -e
-          # Source environment variables
+          # Source environment variables (VERSION and CHANGE_LOG)
           source $GITHUB_ENV
           VERSION_LABEL="## v${VERSION}"
           RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
           CHANGE_LOG_ENTRY="${CHANGE_LOG}"
           
-          # Ensure README.md exists
+          # Ensure README.md exists.
           if [ ! -f README.md ]; then
             touch README.md
           fi
 
+          # If the version header already exists, update its changelog section.
           if grep -q "$VERSION_LABEL" README.md; then
             awk -v version="$VERSION_LABEL" -v log_entry="$CHANGE_LOG_ENTRY" '
               $0 ~ version { print; found=1; next }
@@ -100,6 +113,7 @@ jobs:
               { print }
             ' README.md > temp.md && mv temp.md README.md
           else
+            # Prepend the new version details at the top of the README.
             echo -e "$VERSION_LABEL\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
           fi
 
@@ -111,14 +125,14 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           
-          # Ensure README.md exists
+          # Ensure README.md exists.
           if [ ! -f README.md ]; then
             touch README.md
           fi
           
           git add README.md
           
-          # Check if there are changes to commit
+          # Commit only if there are changes.
           if git diff --staged --quiet; then
             echo "No changes to commit."
             exit 0
