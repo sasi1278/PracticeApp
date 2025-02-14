@@ -6,6 +6,7 @@
 
 ### CHANGE LOGS
 * f34920d - ADH-1533 change version
+* 3ae3fc7 - ADH-1533 Change
 
 ## v0.0.1
 
