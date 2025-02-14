@@ -34,8 +34,8 @@ jobs:
           COMMIT_HASH=$(git log -1 --pretty=format:'%h')
           COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')
       
-          # Normalize the JIRA ID format: Remove extra spaces or misplaced dashes
-          NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([A-Z]+)[[:space:]-]+([0-9]+)\b/\1-\2/g')
+          # Normalize the JIRA ID format (supporting any letter case & spacing)
+          NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
       
           # Extract JIRA ID if present
           if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
@@ -49,7 +49,7 @@ jobs:
           # Trim any leading/trailing spaces
           CHANGE_LOG=$(echo "$CHANGE_LOG" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
       
-          echo "CHANGE_LOG=$CHANGE_LOG" >> $GITHUB_ENV
+          echo "CHANGE_LOG=$CHANGE_LOG" >> $GITHUB_ENV      
       
       - name: Update README
         run: |
