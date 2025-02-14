@@ -65,23 +65,22 @@ jobs:
       
       - name: Update README
         run: |
-          VERSION="## v${{ env.VERSION }}"
-          RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
-          CHANGE_LOG_ENTRY="${{ env.CHANGE_LOG }}"
-
-          if grep -q "$VERSION" README.md; then
-            # Insert commit message BELOW "CHANGE LOGS" section of the correct version
-            awk -v version="$VERSION" -v log_entry="$CHANGE_LOG_ENTRY" '
-              $0 ~ version { print; found=1; next }
-              found && /^### CHANGE LOGS/ { print; inside_log=1; next }
-              inside_log && NF { print; next }
-              inside_log { print log_entry; inside_log=0; found=0 }
-              { print }
-            ' README.md > temp.md && mv temp.md README.md
-          else
-            # Prepend new version with a new CHANGE LOGS section
-            echo -e "$VERSION\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
-          fi
+            set -e
+            VERSION="## v${VERSION}"
+            RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
+            CHANGE_LOG_ENTRY="$CHANGE_LOG"
+  
+            if grep -q "$VERSION" README.md; then
+              awk -v version="$VERSION" -v log_entry="$CHANGE_LOG_ENTRY" '
+                $0 ~ version { print; found=1; next }
+                found && /^### CHANGE LOGS/ { print; inside_log=1; next }
+                inside_log && NF { print; next }
+                inside_log { print log_entry; inside_log=0; found=0 }
+                { print }
+              ' README.md > temp.md && mv temp.md README.md
+            else
+              echo -e "$VERSION\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
+            fi
 
       - name: Commit and push changes
         env:
