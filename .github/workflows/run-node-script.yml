@@ -34,22 +34,31 @@ jobs:
           COMMIT_HASH=$(git log -1 --pretty=format:'%h')
           COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')
       
-          # Normalize the JIRA ID format (supporting any letter case & spacing)
+          # Normalize JIRA ID (convert to uppercase, remove spaces)
           NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
       
           # Extract JIRA ID if present
-          if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
+          if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*[-:]?[[:space:]]*(.*) ]]; then
             JIRA_ID="${BASH_REMATCH[1]}"
             COMMIT_TEXT="${BASH_REMATCH[2]}"
-            CHANGE_LOG="${JIRA_ID} - ${COMMIT_TEXT}"
+            
+            # Remove unwanted "VERSION-0.0.X" patterns
+            CLEAN_COMMIT_TEXT=$(echo "$COMMIT_TEXT" | sed -E 's/VERSION-[0-9]+\.[0-9]+\.[0-9]+//g' | sed 's/^[[:space:]]*//')
+      
+            # Convert JIRA ID into a clickable link
+            JIRA_URL="https://your-jira-instance.com/browse/${JIRA_ID}"
+            FORMATTED_JIRA_ID="[\`${JIRA_ID}\`](${JIRA_URL})"
+      
+            CHANGE_LOG="* ${FORMATTED_JIRA_ID} - ${CLEAN_COMMIT_TEXT}"
           else
-            CHANGE_LOG="${COMMIT_HASH} - ${COMMIT_MESSAGE}"
+            CHANGE_LOG="* \`${COMMIT_HASH}\` - ${COMMIT_MESSAGE}"
           fi
       
-          # Trim any leading/trailing spaces
+          # Trim leading/trailing spaces
           CHANGE_LOG=$(echo "$CHANGE_LOG" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
       
-          echo "CHANGE_LOG=$CHANGE_LOG" >> $GITHUB_ENV      
+          echo "CHANGE_LOG=$CHANGE_LOG" >> $GITHUB_ENV
+      
       
       - name: Update README
         run: |
