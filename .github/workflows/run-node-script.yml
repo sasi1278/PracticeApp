@@ -12,7 +12,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PAT_TOKEN }} # Use PAT instead of GITHUB_TOKEN
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}  # Ensure this secret exists in GitHub Secrets
 
       - name: Create or update README
         run: |
@@ -24,9 +25,11 @@ jobs:
           git log -1 --pretty=format:"%h - %s" >> README.md
 
       - name: Commit and push changes
+        env:
+          PAT: ${{ secrets.PAT_TOKEN }}  # Reference the PAT secret
         run: |
-          git config --global user.name "sasi1278"
-          git config --global user.email "sasi.chimmili@gmail.com"
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
           git add README.md
           git commit -m "Update README via GitHub Actions" || echo "No changes to commit"
-          git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/YOUR_USERNAME/YOUR_REPO.git main
+          git push https://x-access-token:${PAT}@github.com/sasi1278/PracticeApp.git main
