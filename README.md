@@ -10,6 +10,8 @@
 * 23d7e2f - Merge pull request #10 from sasi1278/trail
 * <span style='color:skyblue;'>[ADH-978](https://jira.example.com/browse/ADH-978)</span> - Secure check
 * <span style='color:skyblue;'>[ADH-456](https://jira.example.com/browse/ADH-456)</span> - Change from main
+* <span style='color:skyblue;'>[ADH-234](https://jira.example.com/browse/ADH-234)</span> - warning
+
 
 
 
