@@ -3,6 +3,8 @@
 **RELEASE DATE:** 2025-02-14
 
 ### CHANGE LOGS
+* <span style='color:skyblue;'>[ADH-125](https://jira.example.com/browse/ADH-125)</span> - on Main
+
 
 * <span style='color:skyblue;'>[ASH-124](https://jira.example.com/browse/ASH-124)</span> - version change
 
