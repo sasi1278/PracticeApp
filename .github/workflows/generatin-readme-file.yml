@@ -49,21 +49,8 @@ jobs:
             touch README.md
           fi
 
-          # Get the hash of the last commit that touched README.md (using --follow to track its history)
-          LAST_VERSION_COMMIT=$(git log --follow -1 --pretty=format:'%h' -- README.md || echo "")
-          CURRENT_COMMIT=$(git rev-parse HEAD)
-          echo "LAST_VERSION_COMMIT: ${LAST_VERSION_COMMIT}"
-          echo "CURRENT_COMMIT: ${CURRENT_COMMIT}"
-
-          # If the current commit is the same as the last commit that touched README.md,
-          # then the file was just created/modified in this commit. In that case, show at least this commit.
-          if [ "$LAST_VERSION_COMMIT" = "$CURRENT_COMMIT" ]; then
-            LOG_COMMAND="git log --follow -1 HEAD --pretty=format:'%h %s' -- README.md"
-          else
-            COMMIT_RANGE="${LAST_VERSION_COMMIT}..HEAD"
-            LOG_COMMAND="git log --follow $COMMIT_RANGE --pretty=format:'%h %s' -- README.md"
-          fi
-
+          # Using full commit history rather than limiting to README.md changes.
+          LOG_COMMAND="git log --pretty=format:'%h %s'"
           echo "Using log command: $LOG_COMMAND"
 
           CHANGE_LOG=""
