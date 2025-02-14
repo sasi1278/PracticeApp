@@ -31,47 +31,36 @@ jobs:
       - name: Extract latest commit message
         id: latest_commit
         run: |
-          # Try to get the last commit that touched README.md
-          LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md || echo "")
+          # Attempt to get the commit that touched README.md
+          COMMIT_LINE=$(git log -1 HEAD --pretty=format:'%h %s' -- README.md)
+          if [ -z "$COMMIT_LINE" ]; then
+            echo "No commit found specifically for README.md, falling back to HEAD commit."
+            COMMIT_LINE=$(git log -1 HEAD --pretty=format:'%h %s')
+          fi
+      
+          # Debug output: show the commit line
+          echo "Using commit line: $COMMIT_LINE"
+      
+          COMMIT_HASH=$(echo "$COMMIT_LINE" | awk '{print $1}')
+          COMMIT_MESSAGE=$(echo "$COMMIT_LINE" | cut -d ' ' -f2-)
+          
+          # Fallback if commit message is empty (shouldn't normally happen)
+          if [ -z "$COMMIT_MESSAGE" ]; then
+            COMMIT_MESSAGE="No commit message provided"
+          fi
+      
+          NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
           
           CHANGE_LOG=""
-          
-          if [ -z "$LAST_VERSION_COMMIT" ]; then
-            echo "README.md is new. Using the current HEAD commit."
-            # Use the current HEAD commit message directly
-            line=$(git log -1 HEAD --pretty=format:'%h %s')
-            COMMIT_HASH=$(echo "$line" | awk '{print $1}')
-            COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
-            
-            NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
-            
-            if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
-              JIRA_ID="${BASH_REMATCH[1]}"
-              COMMIT_TEXT="${BASH_REMATCH[2]}"
-              JIRA_LINK="[${JIRA_ID}](https://jira.example.com/browse/${JIRA_ID})"
-              CHANGE_LOG+="* <span style='color:skyblue;'>${JIRA_LINK}</span> - ${COMMIT_TEXT}\n"
-            else
-              CHANGE_LOG+="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}\n"
-            fi
+          if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
+            JIRA_ID="${BASH_REMATCH[1]}"
+            COMMIT_TEXT="${BASH_REMATCH[2]}"
+            JIRA_LINK="[${JIRA_ID}](https://jira.example.com/browse/${JIRA_ID})"
+            CHANGE_LOG+="* <span style='color:skyblue;'>${JIRA_LINK}</span> - ${COMMIT_TEXT}\n"
           else
-            # If README.md already exists, get the commits since the last update.
-            while IFS= read -r line; do
-              COMMIT_HASH=$(echo "$line" | awk '{print $1}')
-              COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
-              
-              NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
-            
-              if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
-                JIRA_ID="${BASH_REMATCH[1]}"
-                COMMIT_TEXT="${BASH_REMATCH[2]}"
-                JIRA_LINK="[${JIRA_ID}](https://jira.example.com/browse/${JIRA_ID})"
-                CHANGE_LOG+="* <span style='color:skyblue;'>${JIRA_LINK}</span> - ${COMMIT_TEXT}\n"
-              else
-                CHANGE_LOG+="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}\n"
-              fi
-            done <<< "$(git log ${LAST_VERSION_COMMIT}..HEAD --pretty=format:'%h %s')"
+            CHANGE_LOG+="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}\n"
           fi
-          
+      
           echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV
       
       - name: Update README
