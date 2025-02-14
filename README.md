@@ -1,4 +1,5 @@
 ## v0.0.2
+* 928bdb6 - ADH-1533 new check
 
 * 2facc6b - ADH-1533 commits checks
 **RELEASE DATE:** 2025-02-14
