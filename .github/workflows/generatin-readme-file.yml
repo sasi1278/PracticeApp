@@ -43,9 +43,10 @@ jobs:
         id: latest_commit
         run: |
           set -e
+          # If README.md does not exist, create an empty one
           if [ ! -f README.md ]; then
-            echo "Error: README.md not found!"
-            exit 1
+            echo "README.md not found, creating a new one..."
+            touch README.md
           fi
 
           LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md || echo "")
