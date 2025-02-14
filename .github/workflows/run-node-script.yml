@@ -34,8 +34,11 @@ jobs:
           COMMIT_HASH=$(git log -1 --pretty=format:'%h')
           COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')
       
-          # Use a stricter regex to capture JIRA ID correctly
-          if [[ "$COMMIT_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
+          # Normalize the JIRA ID format: Remove extra spaces or misplaced dashes
+          NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([A-Z]+)[[:space:]-]+([0-9]+)\b/\1-\2/g')
+      
+          # Extract JIRA ID if present
+          if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
             JIRA_ID="${BASH_REMATCH[1]}"
             COMMIT_TEXT="${BASH_REMATCH[2]}"
             CHANGE_LOG="${JIRA_ID} - ${COMMIT_TEXT}"
@@ -47,7 +50,6 @@ jobs:
           CHANGE_LOG=$(echo "$CHANGE_LOG" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
       
           echo "CHANGE_LOG=$CHANGE_LOG" >> $GITHUB_ENV
-      
       
       - name: Update README
         run: |
