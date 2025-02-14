@@ -31,25 +31,20 @@ jobs:
       - name: Extract latest commit message
         id: latest_commit
         run: |
-          # Attempt to get the last commit that touched README.md
+          # Try to get the last commit that touched README.md
           LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md || echo "")
           
-          if [ -z "$LAST_VERSION_COMMIT" ]; then
-            echo "README.md is new. Using the commit that triggered its creation (HEAD)."
-            # Use HEAD commit as the only commit in the changelog range.
-            commit_range="HEAD~0..HEAD"
-          else
-            commit_range="${LAST_VERSION_COMMIT}..HEAD"
-          fi
-      
           CHANGE_LOG=""
-      
-          while IFS= read -r line; do
+          
+          if [ -z "$LAST_VERSION_COMMIT" ]; then
+            echo "README.md is new. Using the current HEAD commit."
+            # Use the current HEAD commit message directly
+            line=$(git log -1 HEAD --pretty=format:'%h %s')
             COMMIT_HASH=$(echo "$line" | awk '{print $1}')
             COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
-      
+            
             NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
-      
+            
             if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
               JIRA_ID="${BASH_REMATCH[1]}"
               COMMIT_TEXT="${BASH_REMATCH[2]}"
@@ -58,8 +53,25 @@ jobs:
             else
               CHANGE_LOG+="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}\n"
             fi
-          done <<< "$(git log $commit_range --pretty=format:'%h %s')"
-      
+          else
+            # If README.md already exists, get the commits since the last update.
+            while IFS= read -r line; do
+              COMMIT_HASH=$(echo "$line" | awk '{print $1}')
+              COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
+              
+              NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
+            
+              if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
+                JIRA_ID="${BASH_REMATCH[1]}"
+                COMMIT_TEXT="${BASH_REMATCH[2]}"
+                JIRA_LINK="[${JIRA_ID}](https://jira.example.com/browse/${JIRA_ID})"
+                CHANGE_LOG+="* <span style='color:skyblue;'>${JIRA_LINK}</span> - ${COMMIT_TEXT}\n"
+              else
+                CHANGE_LOG+="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}\n"
+              fi
+            done <<< "$(git log ${LAST_VERSION_COMMIT}..HEAD --pretty=format:'%h %s')"
+          fi
+          
           echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV
       
       - name: Update README
