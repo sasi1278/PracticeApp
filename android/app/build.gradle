@@ -117,11 +117,3 @@ dependencies {
         implementation jscFlavor
     }
 }
-
-tasks.register("checkVersionChange", Exec) {
-    executable "npx"
-    args "ts-node", "../../updateReadme.ts"
-}
-
-preBuild.dependsOn(tasks.named("checkVersionChange"))
-
