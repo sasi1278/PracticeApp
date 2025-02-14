@@ -1,5 +1,6 @@
 ## v0.0.2
 
+* 2facc6b - ADH-1533 commits checks
 **RELEASE DATE:** 2025-02-14
 
 ### CHANGE LOGS
