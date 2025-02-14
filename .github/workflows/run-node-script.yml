@@ -3,7 +3,7 @@ name: Run Node Script on Merge
 on:
   push:
     branches:
-      - main
+      - main  # Trigger only when changes are pushed to the main branch
 
 jobs:
   run-script:
@@ -13,22 +13,78 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set Up Node.js
+      - name: Set Up Node.js (Latest Stable)
         uses: actions/setup-node@v4
         with:
-          node-version: 'latest'
+          node-version: 'latest'  # Always use the latest stable version
 
-      - name: Check If Merge Is From x Branch
+      - name: Check If Merge Is From Develop Branch
         id: check-merge
         run: |
           BASE_BRANCH=$(git log -1 --pretty=%P | awk '{print $1}')
           echo "Base branch: $BASE_BRANCH"
-          if git branch -r --contains $BASE_BRANCH | grep -q "origin/x"; then
-            echo "MERGED_FROM_X=true" >> $GITHUB_ENV
+          if git branch -r --contains $BASE_BRANCH | grep -q "origin/develop"; then
+            echo "MERGED_FROM_DEVELOP=true" >> $GITHUB_ENV
           else
-            echo "MERGED_FROM_X=false" >> $GITHUB_ENV
+            echo "MERGED_FROM_DEVELOP=false" >> $GITHUB_ENV
           fi
 
-      - name: Run Node Script
-        if: env.MERGED_FROM_X == 'true'
-        run: ts-node  "../../updateReadme.ts"
+      - name: Run Inline Node.js Code
+        if: env.MERGED_FROM_DEVELOP == 'true'
+        run: |
+          node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const { execSync } = require('child_process');
+
+          const packageJsonPath = path.resolve(__dirname, 'package.json');
+          const readmePath = path.resolve(__dirname, 'README.md');
+
+          if (!fs.existsSync(packageJsonPath)) {
+            process.exit(1);
+          }
+
+          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+          const version = packageJson.version;
+          const releaseDate = new Date().toISOString().split('T')[0];
+
+          if (!fs.existsSync(readmePath)) {
+            fs.writeFileSync(readmePath, '# README.md\\n');
+          }
+
+          let readmeContent = fs.readFileSync(readmePath, 'utf8');
+
+          let changeLogs = execSync(
+            'git log develop --pretty=format:\"%s\" --no-merges -n 3 | sed \"s/\\(ADH-[0-9]*\\)/\\1 |/\"'
+          )
+          .toString()
+          .trim()
+          .split('\\n')
+          .map(line => {
+            let [feat, message] = line.split(' | ');
+            return feat && message
+              ? `<a href='' style='color: #5DADE2;'>${feat}</a> | ${message}`
+              : message || '';
+          })
+          .join('\\n\\n');
+
+          const newReleaseNotes = `
+          ## v${version}
+
+          **RELEASE DATE:** ${releaseDate}
+
+          ### CHANGE LOGS
+          ${changeLogs}
+          `;
+
+          const headingRegex = /^# README\\.md\\s*\\r?\\n*/i;
+
+          if (!headingRegex.test(readmeContent)) {
+            readmeContent = `# README.md\\n${readmeContent}`;
+          }
+
+          if (!readmeContent.includes(`## v${version}`)) {
+            readmeContent = readmeContent.replace(headingRegex, `$&\\n${newReleaseNotes}`);
+            fs.writeFileSync(readmePath, readmeContent);
+          }
+          "
