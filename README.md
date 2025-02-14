@@ -3,6 +3,7 @@
 **RELEASE DATE:** 2025-02-14
 
 ### CHANGE LOGS
+* ADH-1533 - new version check 0.0.3
 
 * 049ab90 - ADH - 1533 new version 0.0.3
 
