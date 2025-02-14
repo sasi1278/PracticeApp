@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:  # Allows manual trigger
 
 jobs:
   update-readme:
@@ -28,28 +27,22 @@ jobs:
         run: |
           VERSION="## v${{ env.VERSION }}"
           RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
-          CHANGE_LOG="${{ env.CHANGE_LOG }}"
+          CHANGE_LOG="### CHANGE LOGS\n${{ env.CHANGE_LOG }}\n"
 
           if grep -q "$VERSION" README.md; then
-            # If the version exists, append new log under the existing "CHANGE LOGS" section
-            awk -v new_log="$CHANGE_LOG" '/^### CHANGE LOGS/{print; getline; print new_log; next}1' README.md > temp.md && mv temp.md README.md
+            # If the version exists, append the new changelog below it
+            awk -v new_log="$CHANGE_LOG" '/^### CHANGE LOGS/{print; print new_log; next}1' README.md > temp.md && mv temp.md README.md
           else
-            # If it's a new version, prepend it at the top with a single "CHANGE LOGS" heading
-            echo -e "$VERSION\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n$CHANGE_LOG\n\n$(cat README.md)" > README.md
+            # If it's a new version, prepend it at the top
+            echo -e "$VERSION\n\n$RELEASE_DATE\n\n$CHANGE_LOG\n$(cat README.md)" > README.md
           fi
 
-      - name: Check if changes exist
-        id: check_changes
-        run: |
-          git diff --quiet || echo "HAS_CHANGES=true" >> $GITHUB_ENV
-
       - name: Commit and push changes
-        if: env.HAS_CHANGES == 'true'
         env:
           PAT: ${{ secrets.PAT_TOKEN }}
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add README.md
-          git commit -m "Update README with latest changelog"
+          git commit -m "Update README with latest changelog" || echo "No changes to commit"
           git push https://x-access-token:${PAT}@github.com/sasi1278/PracticeApp.git main
