@@ -51,7 +51,7 @@ jobs:
 
           let readmeContent = fs.readFileSync(readmePath, 'utf8');
 
-          const changeLogs = execSync('git log develop --pretty=format:%s --no-merges -n 3')
+          const changeLogs = execSync('git log main --pretty=format:%s --no-merges -n 3')
           .toString()
           .trim()
           .split('\n')
