@@ -6,6 +6,7 @@
 * ADH-1533 - new VERSION-0.0.4 a
 * ADH-1245 - back to normal
 * 84d1a46 - ADH- new
+* <span style='color:skyblue;'>[ADH-876](https://jira.example.com/browse/ADH-876)</span> - a new chapter
 
 * f4af3c7 - ADh- new version 0.0.4
 
