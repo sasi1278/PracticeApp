@@ -31,27 +31,27 @@ jobs:
       - name: Extract latest commit message
         id: latest_commit
         run: |
-          COMMIT_HASH=$(git log -1 --pretty=format:'%h')
-          COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')
+          LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md)
+          
+          CHANGE_LOG=""
+          
+          while IFS= read -r line; do
+            COMMIT_HASH=$(echo "$line" | awk '{print $1}')
+            COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
       
-          # Normalize the JIRA ID format (supporting any letter case & spacing)
-          NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
+            NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
       
-          # Extract JIRA ID if present
-          if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
-            JIRA_ID="${BASH_REMATCH[1]}"
-            COMMIT_TEXT="${BASH_REMATCH[2]}"
-            JIRA_LINK="[${JIRA_ID}](https://jira.example.com/browse/${JIRA_ID})"
-            # Add sky blue color using inline HTML (Note: GitHub Markdown may strip it)
-            CHANGE_LOG="* <span style='color:skyblue;'>${JIRA_LINK}</span> - ${COMMIT_TEXT}"
-          else
-            CHANGE_LOG="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}"
-          fi
+            if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
+              JIRA_ID="${BASH_REMATCH[1]}"
+              COMMIT_TEXT="${BASH_REMATCH[2]}"
+              JIRA_LINK="[${JIRA_ID}](https://jira.example.com/browse/${JIRA_ID})"
+              CHANGE_LOG+="* <span style='color:skyblue;'>${JIRA_LINK}</span> - ${COMMIT_TEXT}\n"
+            else
+              CHANGE_LOG+="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}\n"
+            fi
+          done <<< "$(git log ${LAST_VERSION_COMMIT}..HEAD --pretty=format:'%h %s')"
       
-          # Trim any leading/trailing spaces
-          CHANGE_LOG=$(echo "$CHANGE_LOG" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-      
-          echo "CHANGE_LOG=$CHANGE_LOG" >> $GITHUB_ENV      
+          echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV      
 
       - name: Update README
         run: |
