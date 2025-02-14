@@ -3,7 +3,7 @@ name: Update README on Main Branch
 on:
   push:
     branches:
-      - main
+      - main  # Restrict workflow to the main branch to avoid unnecessary triggers
 
 jobs:
   update-readme:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Ensures full commit history is available
 
       - name: Check last commit author
         id: check_commit
@@ -23,6 +23,7 @@ jobs:
             echo "Skipping workflow to avoid infinite loop"
             exit 0
           fi
+
       - name: Ensure required tools are installed
         run: |
           set -e
@@ -30,6 +31,7 @@ jobs:
             echo "Error: jq is required but not installed."
             exit 1
           fi
+
       - name: Get version from package.json
         id: package_version
         run: echo "VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
@@ -42,7 +44,9 @@ jobs:
             echo "Error: README.md not found!"
             exit 1
           fi
+
           LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md || echo "")
+
           CHANGE_LOG=""
           
           while IFS= read -r line; do
@@ -50,7 +54,7 @@ jobs:
             COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
       
             NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
-
+      
             if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
               JIRA_ID="${BASH_REMATCH[1]}"
               COMMIT_TEXT="${BASH_REMATCH[2]}"
@@ -69,6 +73,7 @@ jobs:
           VERSION="## v${{ env.VERSION }}"
           RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
           CHANGE_LOG_ENTRY="${{ env.CHANGE_LOG }}"
+
           if grep -q "$VERSION" README.md; then
             awk -v version="$VERSION" -v log_entry="$CHANGE_LOG_ENTRY" '
               $0 ~ version { print; found=1; next }
@@ -80,6 +85,7 @@ jobs:
           else
             echo -e "$VERSION\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
           fi
+
       - name: Commit and push changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -90,9 +96,3 @@ jobs:
           git add README.md
           git commit -m "Update README with latest changelog [skip ci]" || echo "No changes to commit"
           git push
-          if git diff --staged --quiet; then
-            echo "No changes to commit."
-            exit 0
-          fi
-          git commit -m "Update README with latest changelog [skip ci]"
-          git push origin main
