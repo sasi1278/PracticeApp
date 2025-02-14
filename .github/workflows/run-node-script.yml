@@ -18,68 +18,91 @@ jobs:
         with:
           node-version: 'latest'  # Always use the latest stable version
 
-      - name: Set Environment Variable for Merge Detection
-        run: echo "MERGED_FROM_ANY=true" >> $GITHUB_ENV
+      - name: Check If Merge Is From Develop Branch
+        id: check-merge
+        run: |
+          BASE_BRANCH=$(git rev-parse HEAD~1)
+          echo "Base branch: $BASE_BRANCH"
+          if git branch -r --contains $BASE_BRANCH | grep -q "origin/develop"; then
+            echo "MERGED_FROM_DEVELOP=true" >> $GITHUB_ENV
+          else
+            echo "MERGED_FROM_DEVELOP=false" >> $GITHUB_ENV
+          fi
 
-      - name: Run Node.js Script to Update README
-        if: env.MERGED_FROM_ANY == 'true'
+      - name: Run Inline Node.js Code
+        if: env.MERGED_FROM_DEVELOP == 'true'
         run: |
           node -e "
           const fs = require('fs');
           const path = require('path');
           const { execSync } = require('child_process');
 
-          const packageJsonPath = path.resolve(__dirname, 'package.json');
-          const readmePath = path.resolve(__dirname, 'README.md');
+          try {
+            const packageJsonPath = path.resolve(process.cwd(), 'package.json');
+            const readmePath = path.resolve(process.cwd(), 'README.md');
 
-          // Ensure package.json exists; create a default one if missing
-          if (!fs.existsSync(packageJsonPath)) {
-            fs.writeFileSync(
-              packageJsonPath,
-              JSON.stringify({ version: '1.0.0' }, null, 2)
-            );
-          }
+            if (!fs.existsSync(packageJsonPath)) {
+              console.error('Error: package.json not found.');
+              process.exit(1);
+            }
 
-          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-          const version = packageJson.version;
-          const releaseDate = new Date().toISOString().split('T')[0];
+            const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+            const version = packageJson.version || 'unknown';
+            const releaseDate = new Date().toISOString().split('T')[0];
 
-          // Ensure README.md exists
-          if (!fs.existsSync(readmePath)) {
-            fs.writeFileSync(readmePath, '# Project Documentation\n\n');
-          }
+            if (!fs.existsSync(readmePath)) {
+              fs.writeFileSync(readmePath, '# README.md\n');
+            }
 
-          let readmeContent = fs.readFileSync(readmePath, 'utf8');
+            let readmeContent = fs.readFileSync(readmePath, 'utf8');
 
-          const changeLogs = execSync('git log main --pretty=format:%s --no-merges -n 3')
-          .toString()
-          .trim()
-          .split('\n')
-          .map((line:string) => {
-            const match = line.match(/(ADH-\d+)/);
-            return match ? `<a href='' style='color: #5DADE2;'>${match[1]}</a> ${line.replace(match[1], '').trim()}` : line;
-          })
-          .join('\n\n');
+            let changeLogs;
+            try {
+              changeLogs = execSync(
+                'git log main --pretty=format:\"%s\" --no-merges -n 3 | sed \"s/\\(ADH-[0-9]*\\)/\\1 |/\"',
+                { encoding: 'utf-8' }
+              )
+              .trim()
+              .split('\\n')
+              .map(line => {
+                const parts = line.split(' | ');
+                const feat = parts[0] || '';
+                const message = parts[1] || parts[0] || '';
 
-          const newReleaseNotes = \`
-          ## v\${version}
+                return feat.startsWith('ADH-')
+                  ? `<a href='' style='color: #5DADE2;'>${feat}</a> | ${message}`
+                  : message;
+              })
+              .join('\\n\\n');
+            } catch (error) {
+              console.error('Error fetching Git logs:', error.message);
+              changeLogs = 'No changelog available';
+            }
 
-          **RELEASE DATE:** \${releaseDate}
+            const newReleaseNotes = `
+            ## v${version}
 
-          ### CHANGE LOGS
-          \${changeLogs}
-          \`;
+            **RELEASE DATE:** ${releaseDate}
 
-          if (!readmeContent.includes(\`## v\${version}\`)) {
-            readmeContent += \`\n\n\${newReleaseNotes}\`;
-            fs.writeFileSync(readmePath, readmeContent);
+            ### CHANGE LOGS
+            ${changeLogs}
+            `;
+
+            const headingRegex = /^# README\\.md\\s*\\r?\\n*/i;
+
+            if (!headingRegex.test(readmeContent)) {
+              readmeContent = \`# README.md\\n\${readmeContent}\`;
+            }
+
+            if (!readmeContent.includes(\`## v\${version}\`)) {
+              readmeContent = readmeContent.replace(headingRegex, \`$&\\n\${newReleaseNotes}\`);
+              fs.writeFileSync(readmePath, readmeContent);
+            }
+
+            console.log('Updated README.md successfully.');
+
+          } catch (err) {
+            console.error('Script failed:', err.message);
+            process.exit(1);
           }
           "
-
-      - name: Commit and Push Changes
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git commit -m "Update README.md with latest release notes" || echo "No changes to commit"
-          git push
