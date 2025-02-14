@@ -1,4 +1,4 @@
-name: Update README on Main Branch
+name: Update README on Main
 
 on:
   push:
