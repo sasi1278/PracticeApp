@@ -3,7 +3,7 @@ name: Update README on Main Branch
 on:
   push:
     branches:
-      - main  # Restrict workflow to the main branch to avoid unnecessary triggers
+      - main
 
 jobs:
   update-readme:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Ensures full commit history is available
+          fetch-depth: 0
 
       - name: Check last commit author
         id: check_commit
