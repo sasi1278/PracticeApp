@@ -1,105 +1,28 @@
-name: Run Node Script on Merge
+name: Update README on Main
 
 on:
   push:
     branches:
-      - main  # Trigger only when changes are pushed to the main branch
+      - main
 
 jobs:
-  run-script:
+  update-readme:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch full history to check merge parents
 
-      - name: Set Up Node.js (Latest Stable)
-        uses: actions/setup-node@v4
-        with:
-          node-version: 'latest'
-
-      - name: Check If Push Is a Merge Commit
-        id: check-merge
+      - name: Create or update README
         run: |
-          PARENTS=$(git log -1 --pretty=%P)
-          if [[ $(echo "$PARENTS" | wc -w) -eq 2 ]]; then
-            BASE_BRANCH=$(echo "$PARENTS" | awk '{print $2}')
-            echo "Detected merge commit from base branch: $BASE_BRANCH"
-            echo "MERGED=true" >> $GITHUB_ENV
-          else
-            echo "MERGED=false" >> $GITHUB_ENV
-          fi
+          echo "# Project Title" > README.md
+          echo "\nThis README was updated by GitHub Actions." >> README.md
+          echo "\n## Latest Changes" >> README.md
+          git log -1 --pretty=format:"%h - %s" >> README.md
 
-      - name: Run Inline Node.js Code
-        if: env.MERGED == 'true'
+      - name: Commit and push changes
         run: |
-          node -e "
-          const fs = require('fs');
-          const path = require('path');
-          const { execSync } = require('child_process');
-
-          const readmePath = path.resolve(process.cwd(), 'README.md');
-          const packageJsonPath = path.resolve(process.cwd(), 'package.json');
-
-          if (!fs.existsSync(packageJsonPath)) {
-            console.error('Error: package.json not found.');
-            process.exit(1);
-          }
-
-          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-          const version = packageJson.version || 'unknown';
-          const releaseDate = new Date().toISOString().split('T')[0];
-
-          if (!fs.existsSync(readmePath)) {
-            console.log('Creating README.md...');
-            fs.writeFileSync(readmePath, '# README.md\n\n');
-          }
-
-          let readmeContent = fs.readFileSync(readmePath, 'utf8');
-
-          let changeLogs;
-          try {
-            changeLogs = execSync(
-              'git log main --pretty=format:\"%s\" --no-merges -n 3',
-              { encoding: 'utf-8' }
-            )
-            .trim()
-            .split('\\n')
-            .map(line => \`- \${line}\`)
-            .join('\\n');
-          } catch (error) {
-            console.error('Error fetching Git logs:', error.message);
-            changeLogs = 'No changelog available';
-          }
-
-          const newReleaseNotes = `
-          ## v${version}
-
-          **RELEASE DATE:** ${releaseDate}
-
-          ### CHANGE LOGS
-          ${changeLogs}
-          `;
-
-          if (!readmeContent.includes(\`## v\${version}\`)) {
-            readmeContent += \`\n\n\${newReleaseNotes}\`;
-            fs.writeFileSync(readmePath, readmeContent);
-          }
-
-          console.log('Updated README.md successfully.');
-          "
-
-      - name: Commit and Push Changes
-        if: env.MERGED == 'true'
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
           git add README.md
-          if git diff --staged --quiet; then
-            echo "No changes to commit."
-          else
-            git commit -m "Update README with release notes"
-            git push origin main
-          fi
+          git commit -m "Update README via GitHub Actions" || echo "No changes to commit"
+          git push origin main
