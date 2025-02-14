@@ -12,33 +12,24 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history to check merge parents
 
       - name: Set Up Node.js (Latest Stable)
         uses: actions/setup-node@v4
         with:
-          node-version: 'latest'  # Always use the latest stable version
+          node-version: 'latest'
 
       - name: Check If Push Is a Merge Commit
         id: check-merge
         run: |
-          # Get parent commits (a merge commit has 2 parents)
           PARENTS=$(git log -1 --pretty=%P)
-
           if [[ $(echo "$PARENTS" | wc -w) -eq 2 ]]; then
             BASE_BRANCH=$(echo "$PARENTS" | awk '{print $2}')
             echo "Detected merge commit from base branch: $BASE_BRANCH"
-
-            # Check if the source branch is from a remote repository
-            if git branch -r --contains $BASE_BRANCH | grep -q "origin/"; then
-              echo "MERGED_FROM_BRANCH=$(git branch -r --contains $BASE_BRANCH | grep origin/ | head -n 1 | sed 's/origin\///')" >> $GITHUB_ENV
-            else
-              echo "MERGED_FROM_BRANCH=unknown" >> $GITHUB_ENV
-            fi
-
             echo "MERGED=true" >> $GITHUB_ENV
           else
             echo "MERGED=false" >> $GITHUB_ENV
-            echo "MERGED_FROM_BRANCH=none" >> $GITHUB_ENV
           fi
 
       - name: Run Inline Node.js Code
@@ -49,72 +40,66 @@ jobs:
           const path = require('path');
           const { execSync } = require('child_process');
 
-          try {
-            const packageJsonPath = path.resolve(process.cwd(), 'package.json');
-            const readmePath = path.resolve(process.cwd(), 'README.md');
+          const readmePath = path.resolve(process.cwd(), 'README.md');
+          const packageJsonPath = path.resolve(process.cwd(), 'package.json');
 
-            if (!fs.existsSync(packageJsonPath)) {
-              console.error('Error: package.json not found.');
-              process.exit(1);
-            }
-
-            const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-            const version = packageJson.version || 'unknown';
-            const releaseDate = new Date().toISOString().split('T')[0];
-
-            if (!fs.existsSync(readmePath)) {
-              fs.writeFileSync(readmePath, '# README.md\n');
-            }
-
-            let readmeContent = fs.readFileSync(readmePath, 'utf8');
-
-            let changeLogs;
-            try {
-              changeLogs = execSync(
-                'git log main --pretty=format:\"%s\" --no-merges -n 3 | sed \"s/\\(ADH-[0-9]*\\)/\\1 |/\"',
-                { encoding: 'utf-8' }
-              )
-              .trim()
-              .split('\\n')
-              .map(line => {
-                const parts = line.split(' | ');
-                const feat = parts[0] || '';
-                const message = parts[1] || parts[0] || '';
-
-                return feat.startsWith('ADH-')
-                  ? `<a href='' style='color: #5DADE2;'>${feat}</a> | ${message}`
-                  : message;
-              })
-              .join('\\n\\n');
-            } catch (error) {
-              console.error('Error fetching Git logs:', error.message);
-              changeLogs = 'No changelog available';
-            }
-
-            const newReleaseNotes = `
-            ## v${version}
-
-            **RELEASE DATE:** ${releaseDate}
-
-            ### CHANGE LOGS
-            ${changeLogs}
-            `;
-
-            const headingRegex = /^# README\\.md\\s*\\r?\\n*/i;
-
-            if (!headingRegex.test(readmeContent)) {
-              readmeContent = \`# README.md\\n\${readmeContent}\`;
-            }
-
-            if (!readmeContent.includes(\`## v\${version}\`)) {
-              readmeContent = readmeContent.replace(headingRegex, \`$&\\n\${newReleaseNotes}\`);
-              fs.writeFileSync(readmePath, readmeContent);
-            }
-
-            console.log('Updated README.md successfully.');
-
-          } catch (err) {
-            console.error('Script failed:', err.message);
+          if (!fs.existsSync(packageJsonPath)) {
+            console.error('Error: package.json not found.');
             process.exit(1);
           }
+
+          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+          const version = packageJson.version || 'unknown';
+          const releaseDate = new Date().toISOString().split('T')[0];
+
+          if (!fs.existsSync(readmePath)) {
+            console.log('Creating README.md...');
+            fs.writeFileSync(readmePath, '# README.md\n\n');
+          }
+
+          let readmeContent = fs.readFileSync(readmePath, 'utf8');
+
+          let changeLogs;
+          try {
+            changeLogs = execSync(
+              'git log main --pretty=format:\"%s\" --no-merges -n 3',
+              { encoding: 'utf-8' }
+            )
+            .trim()
+            .split('\\n')
+            .map(line => \`- \${line}\`)
+            .join('\\n');
+          } catch (error) {
+            console.error('Error fetching Git logs:', error.message);
+            changeLogs = 'No changelog available';
+          }
+
+          const newReleaseNotes = `
+          ## v${version}
+
+          **RELEASE DATE:** ${releaseDate}
+
+          ### CHANGE LOGS
+          ${changeLogs}
+          `;
+
+          if (!readmeContent.includes(\`## v\${version}\`)) {
+            readmeContent += \`\n\n\${newReleaseNotes}\`;
+            fs.writeFileSync(readmePath, readmeContent);
+          }
+
+          console.log('Updated README.md successfully.');
           "
+
+      - name: Commit and Push Changes
+        if: env.MERGED == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Update README with release notes"
+            git push origin main
+          fi
