@@ -31,5 +31,5 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add README.md
-          git commit -m "Update README via GitHub Actions" || echo "No changes to commit"
+          git commit -m "Update README via GitHub Actions" || echo "No changes to commit now"
           git push https://x-access-token:${PAT}@github.com/sasi1278/PracticeApp.git main
