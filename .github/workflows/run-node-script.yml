@@ -18,19 +18,31 @@ jobs:
         with:
           node-version: 'latest'  # Always use the latest stable version
 
-      - name: Check If Merge Is From Develop Branch
+      - name: Check If Push Is a Merge Commit
         id: check-merge
         run: |
-          BASE_BRANCH=$(git rev-parse HEAD~1)
-          echo "Base branch: $BASE_BRANCH"
-          if git branch -r --contains $BASE_BRANCH | grep -q "origin/develop"; then
-            echo "MERGED_FROM_DEVELOP=true" >> $GITHUB_ENV
+          # Get parent commits (a merge commit has 2 parents)
+          PARENTS=$(git log -1 --pretty=%P)
+
+          if [[ $(echo "$PARENTS" | wc -w) -eq 2 ]]; then
+            BASE_BRANCH=$(echo "$PARENTS" | awk '{print $2}')
+            echo "Detected merge commit from base branch: $BASE_BRANCH"
+
+            # Check if the source branch is from a remote repository
+            if git branch -r --contains $BASE_BRANCH | grep -q "origin/"; then
+              echo "MERGED_FROM_BRANCH=$(git branch -r --contains $BASE_BRANCH | grep origin/ | head -n 1 | sed 's/origin\///')" >> $GITHUB_ENV
+            else
+              echo "MERGED_FROM_BRANCH=unknown" >> $GITHUB_ENV
+            fi
+
+            echo "MERGED=true" >> $GITHUB_ENV
           else
-            echo "MERGED_FROM_DEVELOP=false" >> $GITHUB_ENV
+            echo "MERGED=false" >> $GITHUB_ENV
+            echo "MERGED_FROM_BRANCH=none" >> $GITHUB_ENV
           fi
 
       - name: Run Inline Node.js Code
-        if: env.MERGED_FROM_DEVELOP == 'true'
+        if: env.MERGED == 'true'
         run: |
           node -e "
           const fs = require('fs');
