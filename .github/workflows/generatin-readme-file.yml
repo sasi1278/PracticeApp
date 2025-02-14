@@ -1,52 +1,38 @@
-name: Update README on Main Branch
+name: Update README on Main branch
 
 on:
   push:
     branches:
-      - main  # Restrict workflow to the main branch to avoid unnecessary triggers
+      - "*"
 
 jobs:
   update-readme:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Ensures full commit history is available
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Check last commit author
         id: check_commit
         run: |
           AUTHOR=$(git log -1 --pretty=format:'%an')
-          if [[ "$AUTHOR" == "github-actions" || "$AUTHOR" == "$GITHUB_ACTOR" ]]; then
+          if [[ "$AUTHOR" == "github-actions" ]]; then
             echo "Skipping workflow to avoid infinite loop"
             exit 0
-          fi
-
-      - name: Ensure required tools are installed
-        run: |
-          set -e
-          if ! command -v jq &> /dev/null; then
-            echo "Error: jq is required but not installed."
-            exit 1
           fi
 
       - name: Get version from package.json
         id: package_version
         run: echo "VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
 
-      - name: Extract latest commit messages
+      - name: Extract latest commit message
         id: latest_commit
         run: |
-          set -e
-          if [ ! -f README.md ]; then
-            echo "Error: README.md not found!"
-            exit 1
-          fi
-
-          LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md || echo "")
-
+          LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md)
+          
           CHANGE_LOG=""
           
           while IFS= read -r line; do
@@ -64,17 +50,17 @@ jobs:
               CHANGE_LOG+="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}\n"
             fi
           done <<< "$(git log ${LAST_VERSION_COMMIT}..HEAD --pretty=format:'%h %s')"
-
+      
           echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV      
 
       - name: Update README
         run: |
-          set -e
           VERSION="## v${{ env.VERSION }}"
           RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
           CHANGE_LOG_ENTRY="${{ env.CHANGE_LOG }}"
 
           if grep -q "$VERSION" README.md; then
+            # Insert commit message BELOW "CHANGE LOGS" section of the correct version
             awk -v version="$VERSION" -v log_entry="$CHANGE_LOG_ENTRY" '
               $0 ~ version { print; found=1; next }
               found && /^### CHANGE LOGS/ { print; inside_log=1; next }
@@ -83,16 +69,16 @@ jobs:
               { print }
             ' README.md > temp.md && mv temp.md README.md
           else
+            # Prepend new version with a new CHANGE LOGS section
             echo -e "$VERSION\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
           fi
 
       - name: Commit and push changes
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAT: ${{ secrets.PAT_TOKEN }}
         run: |
-          set -e
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add README.md
           git commit -m "Update README with latest changelog [skip ci]" || echo "No changes to commit"
-          git push
+          git push https://x-access-token:${PAT}@github.com/sasi1278/PracticeApp.git HEAD
