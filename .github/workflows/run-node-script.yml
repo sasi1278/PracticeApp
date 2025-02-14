@@ -39,16 +39,17 @@ jobs:
           CHANGE_LOG_ENTRY="* ${{ env.CHANGE_LOG }}"
 
           if grep -q "$VERSION" README.md; then
-            # Append changelog entry under the correct version
+            # Insert commit message BELOW "CHANGE LOGS" section of the correct version
             awk -v version="$VERSION" -v log_entry="$CHANGE_LOG_ENTRY" '
               $0 ~ version { print; found=1; next }
               found && /^### CHANGE LOGS/ { print; next }
-              found && NF { print log_entry; found=0 }
+              found && NF { print; next }
+              found { print log_entry; found=0 }
               { print }
             ' README.md > temp.md && mv temp.md README.md
           else
             # Prepend new version with a new CHANGE LOGS section
-            echo -e "$VERSION\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
+            echo -e "$VERSION\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
           fi
 
       - name: Commit and push changes
