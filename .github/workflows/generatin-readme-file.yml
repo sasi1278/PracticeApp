@@ -67,6 +67,7 @@ jobs:
             fi
           done <<< "$(git log ${LAST_VERSION_COMMIT}..HEAD --pretty=format:'%h %s')"
 
+          # Export CHANGE_LOG to both env and output
           echo "CHANGE_LOG<<EOF" >> $GITHUB_ENV
           echo -e "$CHANGE_LOG" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
@@ -78,12 +79,19 @@ jobs:
       - name: Update README
         run: |
           set -e
-          VERSION="## v${VERSION}"
+          # Source environment variables
+          source $GITHUB_ENV
+          VERSION_LABEL="## v${VERSION}"
           RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
-          CHANGE_LOG_ENTRY="$CHANGE_LOG"
+          CHANGE_LOG_ENTRY="${CHANGE_LOG}"
+          
+          # Ensure README.md exists
+          if [ ! -f README.md ]; then
+            touch README.md
+          fi
 
-          if grep -q "$VERSION" README.md; then
-            awk -v version="$VERSION" -v log_entry="$CHANGE_LOG_ENTRY" '
+          if grep -q "$VERSION_LABEL" README.md; then
+            awk -v version="$VERSION_LABEL" -v log_entry="$CHANGE_LOG_ENTRY" '
               $0 ~ version { print; found=1; next }
               found && /^### CHANGE LOGS/ { print; inside_log=1; next }
               inside_log && NF { print; next }
@@ -91,7 +99,7 @@ jobs:
               { print }
             ' README.md > temp.md && mv temp.md README.md
           else
-            echo -e "$VERSION\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
+            echo -e "$VERSION_LABEL\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
           fi
 
       - name: Commit and push changes
@@ -101,10 +109,19 @@ jobs:
           set -e
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
+          
+          # Ensure README.md exists
+          if [ ! -f README.md ]; then
+            touch README.md
+          fi
+          
           git add README.md
+          
+          # Check if there are changes to commit
           if git diff --staged --quiet; then
             echo "No changes to commit."
             exit 0
           fi
+          
           git commit -m "Update README with latest changelog [skip ci]"
           git push origin main
