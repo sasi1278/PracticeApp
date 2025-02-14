@@ -23,7 +23,6 @@ jobs:
             echo "Skipping workflow to avoid infinite loop"
             exit 0
           fi
-
       - name: Ensure required tools are installed
         run: |
           set -e
@@ -31,34 +30,25 @@ jobs:
             echo "Error: jq is required but not installed."
             exit 1
           fi
-
       - name: Get version from package.json
         id: package_version
-        run: |
-          VERSION=$(jq -r .version package.json)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
 
       - name: Extract latest commit messages
         id: latest_commit
         run: |
           set -e
-          # Ensure README.md exists; if not, create an empty one.
           if [ ! -f README.md ]; then
-            echo "README.md not found, creating a new one..."
-            touch README.md
+            echo "Error: README.md not found!"
+            exit 1
           fi
-
-          # Using full commit history rather than limiting to README.md changes.
-          LOG_COMMAND="git log --pretty=format:'%h %s'"
-          echo "Using log command: $LOG_COMMAND"
-
+          LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md || echo "")
           CHANGE_LOG=""
+          
           while IFS= read -r line; do
             COMMIT_HASH=$(echo "$line" | awk '{print $1}')
             COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
-
-            # Normalize commit message (for example, standardizing Jira ticket format)
+      
             NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
 
             if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
@@ -69,34 +59,18 @@ jobs:
             else
               CHANGE_LOG+="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}\n"
             fi
-          done <<< "$($LOG_COMMAND)"
+          done <<< "$(git log ${LAST_VERSION_COMMIT}..HEAD --pretty=format:'%h %s')"
 
-          # Export CHANGE_LOG to GITHUB_ENV and GITHUB_OUTPUT for later steps.
-          echo "CHANGE_LOG<<EOF" >> $GITHUB_ENV
-          echo -e "$CHANGE_LOG" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-          echo "CHANGE_LOG<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$CHANGE_LOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV      
 
       - name: Update README
         run: |
           set -e
-          # Source environment variables (VERSION and CHANGE_LOG)
-          source $GITHUB_ENV
-          VERSION_LABEL="## v${VERSION}"
+          VERSION="## v${{ env.VERSION }}"
           RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
-          CHANGE_LOG_ENTRY="${CHANGE_LOG}"
-          
-          # Ensure README.md exists.
-          if [ ! -f README.md ]; then
-            touch README.md
-          fi
-
-          # If the version header already exists, update its changelog section.
-          if grep -q "$VERSION_LABEL" README.md; then
-            awk -v version="$VERSION_LABEL" -v log_entry="$CHANGE_LOG_ENTRY" '
+          CHANGE_LOG_ENTRY="${{ env.CHANGE_LOG }}"
+          if grep -q "$VERSION" README.md; then
+            awk -v version="$VERSION" -v log_entry="$CHANGE_LOG_ENTRY" '
               $0 ~ version { print; found=1; next }
               found && /^### CHANGE LOGS/ { print; inside_log=1; next }
               inside_log && NF { print; next }
@@ -104,10 +78,8 @@ jobs:
               { print }
             ' README.md > temp.md && mv temp.md README.md
           else
-            # Prepend the new version details at the top of README.md.
-            echo -e "$VERSION_LABEL\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
+            echo -e "$VERSION\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
           fi
-
       - name: Commit and push changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -115,19 +87,12 @@ jobs:
           set -e
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          
-          # Ensure README.md exists.
-          if [ ! -f README.md ]; then
-            touch README.md
-          fi
-          
           git add README.md
-          
-          # Commit only if there are changes.
+          git commit -m "Update README with latest changelog [skip ci]" || echo "No changes to commit"
+          git push
           if git diff --staged --quiet; then
             echo "No changes to commit."
             exit 0
           fi
-          
           git commit -m "Update README with latest changelog [skip ci]"
           git push origin main
