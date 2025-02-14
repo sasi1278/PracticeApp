@@ -17,6 +17,8 @@
 * <span style='color:skyblue;'>[ADH-1244](https://jira.example.com/browse/ADH-1244)</span> - change
 * <span style='color:skyblue;'>[ADH-876](https://jira.example.com/browse/ADH-876)</span> - chek for flow from other branch
 * <span style='color:skyblue;'>[ADH-896](https://jira.example.com/browse/ADH-896)</span> - last version
+* 78309bc - Merge pull request #7 from sasi1278/trail
+
 
 
 * <span style='color:skyblue;'>[ADH-876](https://jira.example.com/browse/ADH-876)</span> - new version
