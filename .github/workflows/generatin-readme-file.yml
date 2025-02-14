@@ -31,10 +31,16 @@ jobs:
       - name: Extract latest commit message
         id: latest_commit
         run: |
-          LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md)
-          
+          if [ ! -f README.md ]; then
+            echo "README.md not found. Skipping commit log extraction."
+            echo "CHANGE_LOG=" >> $GITHUB_ENV
+            exit 0
+          fi
+      
+          LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md || echo "")
+      
           CHANGE_LOG=""
-          
+      
           while IFS= read -r line; do
             COMMIT_HASH=$(echo "$line" | awk '{print $1}')
             COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
@@ -51,8 +57,8 @@ jobs:
             fi
           done <<< "$(git log ${LAST_VERSION_COMMIT}..HEAD --pretty=format:'%h %s')"
       
-          echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV      
-
+          echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV
+      
       - name: Update README
         run: |
           VERSION="## v${{ env.VERSION }}"
