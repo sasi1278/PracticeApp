@@ -15,6 +15,15 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.PAT_TOKEN }}
 
+      - name: Check last commit author
+        id: check_commit
+        run: |
+          AUTHOR=$(git log -1 --pretty=format:'%an')
+          if [[ "$AUTHOR" == "github-actions" ]]; then
+            echo "Skipping workflow to avoid infinite loop"
+            exit 0
+          fi
+
       - name: Get version from package.json
         id: package_version
         run: echo "VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
@@ -30,10 +39,10 @@ jobs:
           CHANGE_LOG="### CHANGE LOGS\n${{ env.CHANGE_LOG }}\n"
 
           if grep -q "$VERSION" README.md; then
-            # If the version exists, append the new changelog below it
+            # Append changelog to existing version
             awk -v new_log="$CHANGE_LOG" '/^### CHANGE LOGS/{print; print new_log; next}1' README.md > temp.md && mv temp.md README.md
           else
-            # If it's a new version, prepend it at the top
+            # Prepend new version at the top
             echo -e "$VERSION\n\n$RELEASE_DATE\n\n$CHANGE_LOG\n$(cat README.md)" > README.md
           fi
 
@@ -44,5 +53,5 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add README.md
-          git commit -m "Update README with latest changelog" || echo "No changes to commit"
-          git push https://x-access-token:${PAT}@github.com/sasi1278/PracticeApp.git main
+          git commit -m "Update README with latest changelog [skip ci]" || echo "No changes to commit"
+          git push https://x-access-token:${PAT}@github.com/278/PracticeApp.git main
