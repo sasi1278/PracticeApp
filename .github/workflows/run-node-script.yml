@@ -1,0 +1,34 @@
+name: Run Node Script on Merge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'latest'
+
+      - name: Check If Merge Is From x Branch
+        id: check-merge
+        run: |
+          BASE_BRANCH=$(git log -1 --pretty=%P | awk '{print $1}')
+          echo "Base branch: $BASE_BRANCH"
+          if git branch -r --contains $BASE_BRANCH | grep -q "origin/x"; then
+            echo "MERGED_FROM_X=true" >> $GITHUB_ENV
+          else
+            echo "MERGED_FROM_X=false" >> $GITHUB_ENV
+          fi
+
+      - name: Run Node Script
+        if: env.MERGED_FROM_X == 'true'
+        run: ts-node  "../../updateReadme.ts"
