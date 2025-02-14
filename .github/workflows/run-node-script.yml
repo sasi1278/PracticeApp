@@ -31,8 +31,8 @@ jobs:
       - name: Extract latest commit message
         id: latest_commit
         run: |
-          COMMIT_HASH=$(git log -1 --pretty=format:'%h')
-          COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')
+          COMMIT_HASH=$(git log -10 --pretty=format:'%h')
+          COMMIT_MESSAGE=$(git log -10 --pretty=format:'%s')
       
           # Normalize the JIRA ID format (supporting any letter case & spacing)
           NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
