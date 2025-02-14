@@ -6,6 +6,8 @@
 * <span style='color:skyblue;'>[ADH-1445](https://jira.example.com/browse/ADH-1445)</span> - branch
 * <span style='color:skyblue;'>[ADH-1278](https://jira.example.com/browse/ADH-1278)</span> - version change
 * acce374 - Merge pull request #8 from sasi1278/main
+* ae8af3d - Merge pull request #9 from sasi1278/trail
+
 
 
 
