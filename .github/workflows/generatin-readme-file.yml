@@ -75,10 +75,11 @@ jobs:
 
       - name: Commit and push changes
         env:
-          PAT: ${{ secrets.PAT_TOKEN }}
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add README.md
-          git commit -m "Update README with latest changelog [skip ci]" || echo "No changes to commit"
-          git push https://x-access-token:${PAT}@github.com/sasi1278/PracticeApp.git HEAD
+            set -e
+            git config --global user.name "github-actions"
+            git config --global user.email "github-actions@github.com"
+            git add README.md
+            git commit -m "Update README with latest changelog [skip ci]" || echo "No changes to commit"
+            git push
