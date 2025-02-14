@@ -3,6 +3,7 @@
 **RELEASE DATE:** 2025-02-14
 
 ### CHANGE LOGS
+* ADH-1533 - new VERSION-0.0.4 a
 
 * f4af3c7 - ADh- new version 0.0.4
 
