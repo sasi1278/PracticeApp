@@ -34,7 +34,10 @@ jobs:
 
       - name: Get version from package.json
         id: package_version
-        run: echo "VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
+        run: |
+          VERSION=$(jq -r .version package.json)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Extract latest commit messages
         id: latest_commit
@@ -48,13 +51,12 @@ jobs:
           LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md || echo "")
 
           CHANGE_LOG=""
-          
           while IFS= read -r line; do
             COMMIT_HASH=$(echo "$line" | awk '{print $1}')
             COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
-      
+
             NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
-      
+
             if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
               JIRA_ID="${BASH_REMATCH[1]}"
               COMMIT_TEXT="${BASH_REMATCH[2]}"
@@ -65,14 +67,20 @@ jobs:
             fi
           done <<< "$(git log ${LAST_VERSION_COMMIT}..HEAD --pretty=format:'%h %s')"
 
-          echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV      
+          echo "CHANGE_LOG<<EOF" >> $GITHUB_ENV
+          echo -e "$CHANGE_LOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          echo "CHANGE_LOG<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$CHANGE_LOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Update README
         run: |
           set -e
-          VERSION="## v${{ env.VERSION }}"
+          VERSION="## v${VERSION}"
           RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
-          CHANGE_LOG_ENTRY="${{ env.CHANGE_LOG }}"
+          CHANGE_LOG_ENTRY="$CHANGE_LOG"
 
           if grep -q "$VERSION" README.md; then
             awk -v version="$VERSION" -v log_entry="$CHANGE_LOG_ENTRY" '
