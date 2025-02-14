@@ -3,6 +3,7 @@
 **RELEASE DATE:** 2025-02-14
 
 ### CHANGE LOGS
+* 6c57c9b - ADH-1533 new commit from 0.0.2
 
 * 2a78300 - ADH-1533 commit from 0.0.2
 
