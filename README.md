@@ -3,6 +3,8 @@
 **RELEASE DATE:** 2025-02-14
 
 ### CHANGE LOGS
+* <span style='color:skyblue;'>[ADH-1445](https://jira.example.com/browse/ADH-1445)</span> - branch
+
 
 * <span style='color:skyblue;'>[ADH-1224](https://jira.example.com/browse/ADH-1224)</span> - extract
 
