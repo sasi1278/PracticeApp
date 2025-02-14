@@ -23,17 +23,13 @@ if (!fs.existsSync(readmePath)) {
 
 let readmeContent: string = fs.readFileSync(readmePath, 'utf8');
 
-let ChangeLogs: string = execSync(
-  'git log main --pretty=format:"%s" --no-merges -n 3 | sed \'s/\\(ADH-[0-9]*\\)/\\1 |/\'',
-)
+const changeLogs = execSync('git log main --pretty=format:%s --no-merges -n 3')
   .toString()
   .trim()
   .split('\n')
-  .map((line: string) => {
-    let [feat, message] = line.split(' | ');
-    return feat && message
-      ? `<a href="" style="color: #5DADE2;">${feat}</a> | ${message}`
-      : message || '';
+  .map((line:string) => {
+    const match = line.match(/(ADH-\d+)/);
+    return match ? `<a href='' style='color: #5DADE2;'>${match[1]}</a> | ${line.replace(match[1], '').trim()}` : line;
   })
   .join('\n\n');
 
@@ -43,7 +39,7 @@ const newReleaseNotes = `
 **RELEASE DATE:** ${releaseDate}  
 
 ### CHANGE LOGS 
-${ChangeLogs}
+${changeLogs}
 `;
 
 const headingRegex: RegExp = /^# README\.md\s*\r?\n*/i;

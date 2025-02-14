@@ -55,12 +55,11 @@ jobs:
           .toString()
           .trim()
           .split('\n')
-          .map(line => {
+          .map((line:string) => {
             const match = line.match(/(ADH-\d+)/);
             return match ? `<a href='' style='color: #5DADE2;'>${match[1]}</a> | ${line.replace(match[1], '').trim()}` : line;
           })
           .join('\n\n');
-
 
           const newReleaseNotes = \`
           ## v\${version}
