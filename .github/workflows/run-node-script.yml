@@ -11,12 +11,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }} # Use GitHub Actions token
 
       - name: Create or update README
         run: |
           echo "# Project Title" > README.md
-          echo "\nThis README was updated by GitHub Actions." >> README.md
-          echo "\n## Latest Changes" >> README.md
+          echo "" >> README.md
+          echo "This README was updated by GitHub Actions." >> README.md
+          echo "" >> README.md
+          echo "## Latest Changes" >> README.md
           git log -1 --pretty=format:"%h - %s" >> README.md
 
       - name: Commit and push changes
