@@ -6,6 +6,7 @@
 * ADH-1533 - new version check 0.0.3
 * edddc64 - ADh- 1224 king
 * ADH-12302 - JODSSL-0.0.3
+* ADH-1209 - branch VERSION-0.0.3
 
 * 049ab90 - ADH - 1533 new version 0.0.3
 
