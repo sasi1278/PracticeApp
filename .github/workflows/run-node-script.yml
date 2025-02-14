@@ -18,19 +18,11 @@ jobs:
         with:
           node-version: 'latest'  # Always use the latest stable version
 
-      - name: Check If Merge Is From Develop Branch
-        id: check-merge
-        run: |
-          BASE_BRANCH=$(git log -1 --pretty=%P | awk '{print $1}')
-          echo "Base branch: $BASE_BRANCH"
-          if git branch -r --contains $BASE_BRANCH | grep -q "origin/develop"; then
-            echo "MERGED_FROM_DEVELOP=true" >> $GITHUB_ENV
-          else
-            echo "MERGED_FROM_DEVELOP=false" >> $GITHUB_ENV
-          fi
+      - name: Set Environment Variable for Merge Detection
+        run: echo "MERGED_FROM_ANY=true" >> $GITHUB_ENV
 
-      - name: Run Inline Node.js Code
-        if: env.MERGED_FROM_DEVELOP == 'true'
+      - name: Run Node.js Script to Update README
+        if: env.MERGED_FROM_ANY == 'true'
         run: |
           node -e "
           const fs = require('fs');
@@ -40,22 +32,27 @@ jobs:
           const packageJsonPath = path.resolve(__dirname, 'package.json');
           const readmePath = path.resolve(__dirname, 'README.md');
 
+          // Ensure package.json exists; create a default one if missing
           if (!fs.existsSync(packageJsonPath)) {
-            process.exit(1);
+            fs.writeFileSync(
+              packageJsonPath,
+              JSON.stringify({ version: '1.0.0' }, null, 2)
+            );
           }
 
           const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
           const version = packageJson.version;
           const releaseDate = new Date().toISOString().split('T')[0];
 
+          // Ensure README.md exists
           if (!fs.existsSync(readmePath)) {
-            fs.writeFileSync(readmePath, '# README.md\\n');
+            fs.writeFileSync(readmePath, '# Project Documentation\n\n');
           }
 
           let readmeContent = fs.readFileSync(readmePath, 'utf8');
 
           let changeLogs = execSync(
-            'git log develop --pretty=format:\"%s\" --no-merges -n 3 | sed \"s/\\(ADH-[0-9]*\\)/\\1 |/\"'
+            'git log --pretty=format:\"%s\" --no-merges -n 3 | sed \"s/\\(ADH-[0-9]*\\)/\\1 |/\"'
           )
           .toString()
           .trim()
@@ -68,23 +65,25 @@ jobs:
           })
           .join('\\n\\n');
 
-          const newReleaseNotes = `
-          ## v${version}
+          const newReleaseNotes = \`
+          ## v\${version}
 
-          **RELEASE DATE:** ${releaseDate}
+          **RELEASE DATE:** \${releaseDate}
 
           ### CHANGE LOGS
-          ${changeLogs}
-          `;
+          \${changeLogs}
+          \`;
 
-          const headingRegex = /^# README\\.md\\s*\\r?\\n*/i;
-
-          if (!headingRegex.test(readmeContent)) {
-            readmeContent = `# README.md\\n${readmeContent}`;
-          }
-
-          if (!readmeContent.includes(`## v${version}`)) {
-            readmeContent = readmeContent.replace(headingRegex, `$&\\n${newReleaseNotes}`);
+          if (!readmeContent.includes(\`## v\${version}\`)) {
+            readmeContent += \`\n\n\${newReleaseNotes}\`;
             fs.writeFileSync(readmePath, readmeContent);
           }
           "
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Update README.md with latest release notes" || echo "No changes to commit"
+          git push
