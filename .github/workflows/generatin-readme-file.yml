@@ -4,10 +4,7 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - '**'
-
+      
 jobs:
   update-readme:
     runs-on: ubuntu-latest
