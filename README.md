@@ -11,7 +11,14 @@
 
 * cfe3db0 - Merge pull request #16 from sasi1278/trail
 
+* <span style='color:skyblue;'>[ADH-234](https://jira.example.com/browse/ADH-234)</span> - adding padding in version
+
+* d9a32e1 - Merge branch 'main' into trail
+
 * <span style='color:skyblue;'>[ADH-2](https://jira.example.com/browse/ADH-2)</span> - for version two
+
+
+* f2a4a85 - Merge branch 'main' into trail
 
 ## v0.0.1
 
