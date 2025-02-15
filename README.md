@@ -1,3 +1,12 @@
+## v0.0.29
+
+**RELEASE DATE:** 2025-02-15
+
+### CHANGE LOGS
+
+* <span style='color:skyblue;'>[ADH-29](https://jira.example.com/browse/ADH-29)</span> - to VERSION-29
+
+
 ## v0.0.1
 
 **RELEASE DATE:** 2025-02-15
@@ -14,4 +23,3 @@
 ### CHANGE LOGS
 
 * <span style='color:skyblue;'>[ADH-2](https://jira.example.com/browse/ADH-2)</span> - for vesrion two
-
