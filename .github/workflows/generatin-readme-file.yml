@@ -45,7 +45,8 @@ jobs:
             echo -e "## v${{ env.VERSION }}\n\n**RELEASE DATE:** $(date +'%Y-%m-%d')\n\n### CHANGE LOGS\n\n" > README.md
           fi
 
-          LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md || echo "")
+          # Use the last commit that modified package.json as a reference point (version bump)
+          LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- package.json || echo "")
 
           CHANGE_LOG=""
           
