@@ -7,6 +7,8 @@
 * <span style='color:skyblue;'>[ADH-2](https://jira.example.com/browse/ADH-2)</span> - updating to vesrion two
 
 
+* b92cb49 - Merge branch 'main' into trail
+
 ## v0.0.1
 
 **RELEASE DATE:** 2025-02-15
