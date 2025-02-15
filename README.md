@@ -16,6 +16,8 @@
 * <span style='color:skyblue;'>[ADH-29](https://jira.example.com/browse/ADH-29)</span> - to VERSION-29
 
 
+* <span style='color:skyblue;'>[ADH-29](https://jira.example.com/browse/ADH-29)</span> - back TO-29
+
 ## v0.0.1
 
 **RELEASE DATE:** 2025-02-15
