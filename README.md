@@ -9,6 +9,8 @@
 
 * <span style='color:skyblue;'>[ADH-336](https://jira.example.com/browse/ADH-336)</span> - padding back to twenty
 
+* 2c452e0 - Merge pull request #21 from sasi1278/trail
+
 ## v0.0.2
 
 **RELEASE DATE:** 2025-02-15
