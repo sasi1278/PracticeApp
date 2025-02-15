@@ -1,3 +1,12 @@
+## v0.0.39
+
+**RELEASE DATE:** 2025-02-15
+
+### CHANGE LOGS
+
+* <span style='color:skyblue;'>[ADH-39](https://jira.example.com/browse/ADH-39)</span> - TO-39
+
+
 ## v0.0.29
 
 **RELEASE DATE:** 2025-02-15
