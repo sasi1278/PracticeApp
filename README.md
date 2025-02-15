@@ -17,3 +17,5 @@
 * <span style='color:skyblue;'>[ADH-1](https://jira.example.com/browse/ADH-1)</span> - creation for one
 
 * <span style='color:skyblue;'>[ADH-1](https://jira.example.com/browse/ADH-1)</span> - for version update
+
+* 7c3298a - Merge pull request #15 from sasi1278/trail
