@@ -1,3 +1,12 @@
+## v0.0.23
+
+**RELEASE DATE:** 2025-02-15
+
+### CHANGE LOGS
+
+* <span style='color:skyblue;'>[ADH-23](https://jira.example.com/browse/ADH-23)</span> - to sky
+
+
 ## v0.0.2
 
 **RELEASE DATE:** 2025-02-15
@@ -18,4 +27,3 @@
 
 * <span style='color:skyblue;'>[ADH-123](https://jira.example.com/browse/ADH-123)</span> - new Readme creation version one
 * <span style='color:skyblue;'>[ADH-123](https://jira.example.com/browse/ADH-123)</span> - back to root
-
