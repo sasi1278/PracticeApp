@@ -7,6 +7,8 @@
 * <span style='color:skyblue;'>[ADH-588](https://jira.example.com/browse/ADH-588)</span> - new version
 
 
+* <span style='color:skyblue;'>[ADH-336](https://jira.example.com/browse/ADH-336)</span> - padding back to twenty
+
 ## v0.0.2
 
 **RELEASE DATE:** 2025-02-15
