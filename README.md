@@ -1,11 +1,9 @@
-## v0.0.1
+## v0.0.2
 
 **RELEASE DATE:** 2025-02-15
 
 ### CHANGE LOGS
 
 
-* <span style='color:skyblue;'>[ADH-124](https://jira.example.com/browse/ADH-124)</span> - for one
-
-* <span style='color:skyblue;'>[ADH-123](https://jira.example.com/browse/ADH-123)</span> - for two any branch
+* <span style='color:skyblue;'>[ADH-2](https://jira.example.com/browse/ADH-2)</span> - remvoe readme for two
 
