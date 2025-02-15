@@ -9,6 +9,8 @@
 
 * b92cb49 - Merge branch 'main' into trail
 
+* cfe3db0 - Merge pull request #16 from sasi1278/trail
+
 ## v0.0.1
 
 **RELEASE DATE:** 2025-02-15
