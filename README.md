@@ -1,3 +1,12 @@
+## v0.0.2
+
+**RELEASE DATE:** 2025-02-15
+
+### CHANGE LOGS
+
+* d439442 - Update README with latest changelog [skip ci]
+
+
 ## v0.0.1
 
 **RELEASE DATE:** 2025-02-15
