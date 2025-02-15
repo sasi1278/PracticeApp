@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - '**'
 
 jobs:
   update-readme:
@@ -34,7 +37,24 @@ jobs:
 
       - name: Get version from package.json
         id: package_version
-        run: echo "VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
+        run: |
+          VERSION=$(jq -r .version package.json)
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "Current version: ${VERSION}"
+
+      - name: Determine starting commit for version changelog
+        id: start_commit
+        run: |
+          set -e
+          # Find the first commit where the current version appears in package.json.
+          # This uses git log in reverse order to pick the earliest commit that introduced the version.
+          START_COMMIT=$(git log --reverse --pretty=format:"%h" -S"\"version\": \"${{ env.VERSION }}\"" package.json | head -n 1)
+          if [ -z "$START_COMMIT" ]; then
+            echo "Could not determine start commit; defaulting to beginning of history."
+            START_COMMIT=$(git rev-list --max-parents=0 HEAD)
+          fi
+          echo "START_COMMIT=${START_COMMIT}" >> $GITHUB_ENV
+          echo "Using start commit: ${START_COMMIT}"
 
       - name: Extract latest commit messages
         id: latest_commit
@@ -45,11 +65,9 @@ jobs:
             echo -e "## v${{ env.VERSION }}\n\n**RELEASE DATE:** $(date +'%Y-%m-%d')\n\n### CHANGE LOGS\n\n" > README.md
           fi
 
-          # Use the last commit that modified package.json as a reference point (version bump)
-          LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- package.json || echo "")
-
           CHANGE_LOG=""
           
+          # Get all commits since the start commit (excluding the commit that set the version)
           while IFS= read -r line; do
             COMMIT_HASH=$(echo "$line" | awk '{print $1}')
             COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
@@ -64,27 +82,29 @@ jobs:
             else
               CHANGE_LOG+="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}\n"
             fi
-          done <<< "$(git log ${LAST_VERSION_COMMIT}..HEAD --pretty=format:'%h %s')"
+          done <<< "$(git log ${START_COMMIT}..HEAD --pretty=format:'%h %s')"
 
-          echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV      
+          echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV
 
       - name: Update README
         run: |
           set -e
-          VERSION="## v${{ env.VERSION }}"
+          VERSION_HEADER="## v${{ env.VERSION }}"
           RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
           CHANGE_LOG_ENTRY="${{ env.CHANGE_LOG }}"
 
-          if grep -q "$VERSION" README.md; then
-            awk -v version="$VERSION" -v log_entry="$CHANGE_LOG_ENTRY" '
-              $0 ~ version { print; found=1; next }
-              found && /^### CHANGE LOGS/ { print; inside_log=1; next }
-              inside_log && NF { print; next }
-              inside_log { print log_entry; inside_log=0; found=0 }
+          if grep -q "$VERSION_HEADER" README.md; then
+            # Update the changelog section under the matching version header.
+            awk -v version="$VERSION_HEADER" -v log_entry="$CHANGE_LOG_ENTRY" '
+              BEGIN { updated=0 }
+              $0 ~ version { print; inSection=1; next }
+              inSection && /^## / { if (!updated) { print log_entry; updated=1 }; inSection=0 }
               { print }
+              END { if (inSection && !updated) print log_entry }
             ' README.md > temp.md && mv temp.md README.md
           else
-            echo -e "$VERSION\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
+            # Prepend a new version section
+            echo -e "$VERSION_HEADER\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
           fi
 
       - name: Commit and push changes
@@ -95,5 +115,5 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add README.md
-          git commit -m "Update README with latest changelog [skip ci]" || echo "No changes to commit"
+          git commit -m "Update README with changelog for v${{ env.VERSION }} [skip ci]" || echo "No changes to commit"
           git push
