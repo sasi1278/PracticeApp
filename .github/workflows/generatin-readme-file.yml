@@ -4,7 +4,10 @@ on:
   push:
     branches:
       - main
-      
+  pull_request:
+    branches:
+      - '**'
+
 jobs:
   update-readme:
     runs-on: ubuntu-latest
@@ -39,33 +42,19 @@ jobs:
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "Current version: ${VERSION}"
 
-      - name: Determine starting commit for version changelog
-        id: start_commit
-        run: |
-          set -e
-          # Find the first commit where the current version appears in package.json.
-          # This uses git log in reverse order to pick the earliest commit that introduced the version.
-          START_COMMIT=$(git log --reverse --pretty=format:"%h" -S"\"version\": \"${{ env.VERSION }}\"" package.json | head -n 1)
-          if [ -z "$START_COMMIT" ]; then
-            echo "Could not determine start commit; defaulting to beginning of history."
-            START_COMMIT=$(git rev-list --max-parents=0 HEAD)
-          fi
-          echo "START_COMMIT=${START_COMMIT}" >> $GITHUB_ENV
-          echo "Using start commit: ${START_COMMIT}"
-
       - name: Extract triggering commit message
         id: latest_commit
         run: |
           set -e
           if [ ! -f README.md ]; then
             echo "README.md not found! Creating a new one."
-            echo -e "## v${{ env.VERSION }}\n\n**RELEASE DATE:** $(date +'%Y-%m-%d')\n\n### CHANGE LOGS\n\n" > README.md
+            echo -e "" > README.md
           fi
 
-          # Only use the commit that triggered this workflow (GITHUB_SHA)
+          # Only use the commit that triggered this workflow
           COMMIT_LINE=$(git show -s --pretty=format:'%h %s' $GITHUB_SHA)
           
-          # Normalize the commit message
+          # Normalize the commit message for potential JIRA ticket formatting
           COMMIT_HASH=$(echo "$COMMIT_LINE" | awk '{print $1}')
           COMMIT_MESSAGE=$(echo "$COMMIT_LINE" | cut -d ' ' -f2-)
           NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
@@ -81,25 +70,59 @@ jobs:
           
           echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV
 
-      - name: Update README
+      - name: Update README in descending version order
         run: |
           set -e
+          # Prepare the new section content for this version
           VERSION_HEADER="## v${{ env.VERSION }}"
           RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
-          CHANGE_LOG_ENTRY="${{ env.CHANGE_LOG }}"
-
-          if grep -q "$VERSION_HEADER" README.md; then
-            # Update the changelog section under the matching version header.
-            awk -v version="$VERSION_HEADER" -v log_entry="$CHANGE_LOG_ENTRY" '
-              BEGIN { updated=0 }
-              $0 ~ version { print; inSection=1; next }
-              inSection && /^## / { if (!updated) { print log_entry; updated=1 }; inSection=0 }
-              { print }
-              END { if (inSection && !updated) print log_entry }
+          NEW_SECTION="${VERSION_HEADER}\n\n${RELEASE_DATE}\n\n### CHANGE LOGS\n\n${CHANGE_LOG}"
+          
+          # If the README already contains this version header, update its changelog block.
+          if grep -q "^${VERSION_HEADER}" README.md; then
+            awk -v ver_header="${VERSION_HEADER}" -v new_sec="${NEW_SECTION}" '
+              BEGIN { updating=0 }
+              {
+                if ($0 ~ "^" ver_header) {
+                  print new_sec
+                  updating=1
+                  next
+                }
+                # Skip lines until we hit the next version header (or EOF)
+                if (updating && $0 ~ /^##\ v/) { updating=0 }
+                if (!updating) print $0
+              }
             ' README.md > temp.md && mv temp.md README.md
           else
-            # Prepend a new version section
-            echo -e "$VERSION_HEADER\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
+            # Insert the new section in descending order.
+            # We assume the README lists version sections starting with "## v" in descending order.
+            tmpfile=$(mktemp)
+            inserted=0
+
+            while IFS= read -r line; do
+              # Check for a version header line
+              if [[ "$line" =~ ^##\ v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+                existing_ver="${BASH_REMATCH[1]}"
+                # Compare versions using sort -V.
+                # If the new version is greater than the existing version, then new section should come before.
+                if [ $inserted -eq 0 ]; then
+                  higher=$(printf '%s\n' "${existing_ver}" "${{ env.VERSION }}" | sort -V | head -n1)
+                  # If the lower value is the existing version, then ${{ env.VERSION }} is higher.
+                  if [ "$higher" = "${existing_ver}" ]; then
+                    printf "%b\n" "${NEW_SECTION}" >> "$tmpfile"
+                    inserted=1
+                  fi
+                fi
+              fi
+              echo "$line" >> "$tmpfile"
+            done < README.md
+
+            # If not inserted (i.e. the new version is lower than any existing version), append it at the end.
+            if [ $inserted -eq 0 ]; then
+              printf "\n%b\n" "${NEW_SECTION}" >> "$tmpfile"
+            fi
+
+            mv "$tmpfile" README.md
           fi
 
       - name: Commit and push changes
