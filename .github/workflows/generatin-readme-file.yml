@@ -56,7 +56,7 @@ jobs:
           echo "START_COMMIT=${START_COMMIT}" >> $GITHUB_ENV
           echo "Using start commit: ${START_COMMIT}"
 
-      - name: Extract latest commit messages
+      - name: Extract triggering commit message
         id: latest_commit
         run: |
           set -e
@@ -65,25 +65,23 @@ jobs:
             echo -e "## v${{ env.VERSION }}\n\n**RELEASE DATE:** $(date +'%Y-%m-%d')\n\n### CHANGE LOGS\n\n" > README.md
           fi
 
-          CHANGE_LOG=""
+          # Only use the commit that triggered this workflow (GITHUB_SHA)
+          COMMIT_LINE=$(git show -s --pretty=format:'%h %s' $GITHUB_SHA)
           
-          # Get all commits since the start commit (excluding the commit that set the version)
-          while IFS= read -r line; do
-            COMMIT_HASH=$(echo "$line" | awk '{print $1}')
-            COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
-      
-            NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
-      
-            if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
-              JIRA_ID="${BASH_REMATCH[1]}"
-              COMMIT_TEXT="${BASH_REMATCH[2]}"
-              JIRA_LINK="[${JIRA_ID}](https://jira.example.com/browse/${JIRA_ID})"
-              CHANGE_LOG+="* <span style='color:skyblue;'>${JIRA_LINK}</span> - ${COMMIT_TEXT}\n"
-            else
-              CHANGE_LOG+="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}\n"
-            fi
-          done <<< "$(git log ${START_COMMIT}..HEAD --pretty=format:'%h %s')"
-
+          # Normalize the commit message
+          COMMIT_HASH=$(echo "$COMMIT_LINE" | awk '{print $1}')
+          COMMIT_MESSAGE=$(echo "$COMMIT_LINE" | cut -d ' ' -f2-)
+          NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
+          
+          if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
+            JIRA_ID="${BASH_REMATCH[1]}"
+            COMMIT_TEXT="${BASH_REMATCH[2]}"
+            JIRA_LINK="[${JIRA_ID}](https://jira.example.com/browse/${JIRA_ID})"
+            CHANGE_LOG="* <span style='color:skyblue;'>${JIRA_LINK}</span> - ${COMMIT_TEXT}\n"
+          else
+            CHANGE_LOG="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}\n"
+          fi
+          
           echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV
 
       - name: Update README
