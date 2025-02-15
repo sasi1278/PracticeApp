@@ -11,6 +11,8 @@
 
 * cfe3db0 - Merge pull request #16 from sasi1278/trail
 
+* <span style='color:skyblue;'>[ADH-2](https://jira.example.com/browse/ADH-2)</span> - for version two
+
 ## v0.0.1
 
 **RELEASE DATE:** 2025-02-15
