@@ -13,6 +13,8 @@
 
 * <span style='color:skyblue;'>[ADH-234](https://jira.example.com/browse/ADH-234)</span> - adding padding in version
 
+* d9a32e1 - Merge branch 'main' into trail
+
 ## v0.0.1
 
 **RELEASE DATE:** 2025-02-15
