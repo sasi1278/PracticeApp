@@ -28,6 +28,8 @@
 
 * <span style='color:skyblue;'>[ADH-125](https://jira.example.com/browse/ADH-125)</span> - back to previous padding
 
+* 97e83fa - Merge pull request #20 from sasi1278/trail
+
 ## v0.0.1
 
 **RELEASE DATE:** 2025-02-15
