@@ -7,3 +7,5 @@
 
 * <span style='color:skyblue;'>[ADH-124](https://jira.example.com/browse/ADH-124)</span> - for one
 
+* <span style='color:skyblue;'>[ADH-123](https://jira.example.com/browse/ADH-123)</span> - for two any branch
+
