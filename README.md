@@ -20,6 +20,8 @@
 
 * f2a4a85 - Merge branch 'main' into trail
 
+* 408f5f1 - Merge pull request #17 from sasi1278/trail
+
 ## v0.0.1
 
 **RELEASE DATE:** 2025-02-15
