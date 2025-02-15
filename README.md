@@ -22,6 +22,8 @@
 
 * 408f5f1 - Merge pull request #17 from sasi1278/trail
 
+* 7f79e88 - Merge pull request #18 from sasi1278/main
+
 ## v0.0.1
 
 **RELEASE DATE:** 2025-02-15
