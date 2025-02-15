@@ -1,71 +1,89 @@
-name: Update README on Main branch
+name: Update README on Main Branch
 
 on:
   push:
     branches:
-      - main
+      - main  # Restrict workflow to the main branch to avoid unnecessary triggers
 
 jobs:
   update-readme:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0  # Ensures full commit history is available
 
       - name: Check last commit author
         id: check_commit
         run: |
           AUTHOR=$(git log -1 --pretty=format:'%an')
-          if [[ "$AUTHOR" == "github-actions" ]]; then
+          if [[ "$AUTHOR" == "github-actions" || "$AUTHOR" == "$GITHUB_ACTOR" ]]; then
             echo "Skipping workflow to avoid infinite loop"
             exit 0
           fi
 
+      - name: Ensure required tools are installed
+        run: |
+          set -e
+          if ! command -v jq &> /dev/null; then
+            echo "Error: jq is required but not installed."
+            exit 1
+          fi
+
       - name: Get version from package.json
         id: package_version
-        run: |
-          VERSION=$(jq -r .version package.json)
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+        run: echo "VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
 
-      - name: Extract commits for new version
-        id: commit_range
+      - name: Extract latest commit messages
+        id: latest_commit
         run: |
-          # Attempt to find the commit where the last version was added in README.md
-          LAST_VERSION_COMMIT=$(git log --grep="^## v" --pretty=format:"%H" -n 1 README.md || true)
-          if [ -z "$LAST_VERSION_COMMIT" ]; then
-            echo "No previous version found; capturing all commits up to HEAD."
-            RANGE="HEAD"
-          else
-            RANGE="${LAST_VERSION_COMMIT}..HEAD"
+          set -e
+          if [ ! -f README.md ]; then
+            echo "Error: README.md not found!"
+            exit 1
           fi
 
-          echo "Using commit range: $RANGE"
+          LAST_VERSION_COMMIT=$(git log -1 --pretty=format:'%h' -- README.md || echo "")
 
-          # Capture all commits in that range
-          CHANGE_LOG=$(git log $RANGE --pretty=format:"* %h - %s")
-          if [ -z "$CHANGE_LOG" ]; then
-            CHANGE_LOG="* No new commits found"
-          fi
+          CHANGE_LOG=""
+          
+          while IFS= read -r line; do
+            COMMIT_HASH=$(echo "$line" | awk '{print $1}')
+            COMMIT_MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
+      
+            NORMALIZED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed -E 's/\b([a-zA-Z]+)[[:space:]-]+([0-9]+)\b/\U\1-\2/g')
+      
+            if [[ "$NORMALIZED_MESSAGE" =~ ^([A-Z]+-[0-9]+)[[:space:]]*(.*) ]]; then
+              JIRA_ID="${BASH_REMATCH[1]}"
+              COMMIT_TEXT="${BASH_REMATCH[2]}"
+              JIRA_LINK="[${JIRA_ID}](https://jira.example.com/browse/${JIRA_ID})"
+              CHANGE_LOG+="* <span style='color:skyblue;'>${JIRA_LINK}</span> - ${COMMIT_TEXT}\n"
+            else
+              CHANGE_LOG+="* ${COMMIT_HASH} - ${COMMIT_MESSAGE}\n"
+            fi
+          done <<< "$(git log ${LAST_VERSION_COMMIT}..HEAD --pretty=format:'%h %s')"
 
-          echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV
+          echo -e "CHANGE_LOG<<EOF\n$CHANGE_LOG\nEOF" >> $GITHUB_ENV      
 
       - name: Update README
         run: |
           set -e
-          # Construct header and changelog entries
-          VERSION_HEADER="## v${VERSION}"
+          VERSION="## v${{ env.VERSION }}"
           RELEASE_DATE="**RELEASE DATE:** $(date +'%Y-%m-%d')"
-          NEW_ENTRY="$VERSION_HEADER\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG\n\n"
-          
-          # Check if README.md exists; if not, create one.
-          if [ ! -f README.md ]; then
-            echo -e "$NEW_ENTRY" > README.md
+          CHANGE_LOG_ENTRY="${{ env.CHANGE_LOG }}"
+
+          if grep -q "$VERSION" README.md; then
+            awk -v version="$VERSION" -v log_entry="$CHANGE_LOG_ENTRY" '
+              $0 ~ version { print; found=1; next }
+              found && /^### CHANGE LOGS/ { print; inside_log=1; next }
+              inside_log && NF { print; next }
+              inside_log { print log_entry; inside_log=0; found=0 }
+              { print }
+            ' README.md > temp.md && mv temp.md README.md
           else
-            # Prepend the new version entry to the existing README
-            echo -e "$NEW_ENTRY$(cat README.md)" > README.md
+            echo -e "$VERSION\n\n$RELEASE_DATE\n\n### CHANGE LOGS\n\n$CHANGE_LOG_ENTRY\n\n$(cat README.md)" > README.md
           fi
 
       - name: Commit and push changes
@@ -75,12 +93,6 @@ jobs:
           set -e
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          
           git add README.md
-          if git diff --staged --quiet; then
-            echo "No changes detected. Skipping commit."
-            exit 0
-          fi
-          
-          git commit -m "Update README with latest changelog [skip ci]"
-          git push origin main
+          git commit -m "Update README with latest changelog [skip ci]" || echo "No changes to commit"
+          git push
