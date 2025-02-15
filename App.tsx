@@ -61,7 +61,7 @@ function App() {
 const styles = StyleSheet.create({
   itemContainer: {
     flexDirection: 'row',
-    padding: 20,
+    padding: 10,
     alignItems: 'center',
     height:0.1*Dimensions.get('window').height
   },
