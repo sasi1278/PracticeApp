@@ -11,6 +11,8 @@
 
 * 2c452e0 - Merge pull request #21 from sasi1278/trail
 
+* 0dcca3f - drawer navigation
+
 ## v0.0.2
 
 **RELEASE DATE:** 2025-02-15
