@@ -1,7 +1,9 @@
+import './gesture-handler';
 import React, { useEffect, useState } from 'react';
 import { Dimensions, FlatList, Image, SafeAreaView,StyleSheet,View} from 'react-native';
 import axios from 'axios';
 import CustomText from './src/components/customtext/CustomText';
+import RootStack from './src/navigation/rootNavigation';
 
 const RenderItem = React.memo(({ item }: { item: any }) => (
   <View style={styles.itemContainer}>
@@ -40,8 +42,8 @@ function App() {
   
   return (
     <SafeAreaView style={{flex:1}}>
-      <View style={{flex:1,marginHorizontal:10}}>
-      <FlatList
+      {/* <View style={{flex:1,marginHorizontal:10}}> */}
+      {/* <FlatList
         data={data}
         renderItem={renderItem}
         keyExtractor={(item) => item?.name?.common || item?.name?.official}
@@ -50,8 +52,9 @@ function App() {
         windowSize={5} 
         removeClippedSubviews={true}
         getItemLayout={getItemLayout}
-      />
-      </View>
+      /> */}
+      <RootStack/>
+      {/* </View> */}
     </SafeAreaView>
   );
 }
